@@ -1,0 +1,39 @@
+{% extends "templates/employees/list/_base.html" %}
+
+{% set current_page = 'work_from_home' %}
+
+{% block body %}
+    {{ filters_form(form) }}
+    <table class="table table-bordered table-hover project_times table_late">
+    <thead>
+        <tr>
+            <th class="lp">{% trans %}No.{% endtrans %}</th>
+            <th class="added">{% trans %}Added{% endtrans %}</th>
+            <th class="date">{% trans %}Date{% endtrans %}</th>
+            <th class="user">{% trans %}Employee{% endtrans %}</th>
+            <th class="hours">{% trans %}Hours{% endtrans %}</th>
+            <th class="hours">{% trans %}Hours worked{% endtrans %}</th>
+            <th class="explanation">{% trans %}Team{% endtrans %}</th>
+            <th class="justified">{% trans %}Coordinator{% endtrans %}</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% if times %}
+        {% for time in times %}
+            <tr data-id="{{ time.id }}" data-name="time" class="{{ loop.cycle('odd', 'even') }}">
+                <td>{{ loop.index }}</td>
+                <td title="{{ time.modified_ts.strftime('%d.%m.%Y %H:%M') }}"> {{ time.added_ts.strftime('%d.%m.%Y %H:%M') }}</td>
+                <td>{{ time.date }}</td>
+                <td>{{ time.email }}</td>
+                <td>{{ time.hours }}</td>
+                <td>{{ time.hours_worked }}</td>
+                <td>{{ time.team_name }}</td>
+                <td>{{ time.coordinator }}</td>
+            </tr>
+        {% endfor %}
+    {% else %}
+        <tr><td colspan="8">{% trans %}No results{% endtrans %}</td></tr>
+    {% endif %}
+    </tbody>
+    </table>
+{% endblock %}

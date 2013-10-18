@@ -7,7 +7,7 @@ from sqlalchemy import desc
 
 from intranet3.utils.views import BaseView
 from intranet3 import models as m
-from intranet3.models import User, Leave
+from intranet3.models import User, Leave, DBSession
 from intranet3 import helpers as h
 from intranet3.helpers import groupby
 from intranet3.forms.employees import  FilterForm
@@ -71,6 +71,48 @@ class Absence(ApplyArgsMixin, BaseView):
         absences = query.all()
         form = FilterForm(formdata=self.request.GET)
         return dict(absences=absences, form=form)
+
+@view_config(route_name='employee_list_work_from_home')
+class WorkFromHome(ApplyArgsMixin, BaseView):
+    def _query(self):
+        """
+        Gigantic query to grab all data at once. Raw SQL is so much more fun
+        than SQLAlchemy, isn't it?
+        """
+        fields = (
+            'user_id', 'date', 'email', 'hours', 'explanation', 'hours_worked',
+            'team_name', 'coordinator', 'added_ts', 'modified_ts'
+        )
+        query = DBSession.query(*fields).from_statement("""
+SELECT
+    l.user_id, l.date, u.email, late_end-late_start AS hours, l.explanation,
+    SUM(te.time) AS hours_worked, t.name AS team_name, uc.name AS coordinator,
+    l.added_ts, l.modified_ts
+FROM late l
+LEFT JOIN time_entry te ON te.user_id=l.user_id AND te.date=l.date
+LEFT JOIN "user" u ON u.id=l.user_id
+LEFT JOIN team_members tm ON tm.user_id=u.id
+LEFT JOIN teams t ON tm.team_id=t.id
+LEFT JOIN project p ON p.id IN (
+    SELECT project_id FROM time_entry
+    WHERE user_id=l.user_id AND date=l.date
+    GROUP BY project_id
+    ORDER BY SUM("time") DESC
+    LIMIT 1
+)
+LEFT JOIN "user" uc ON uc.id=p.coordinator_id
+WHERE l.work_from_home=TRUE
+GROUP BY l.user_id, l.date, l.explanation, u.email, l.late_start, l.late_end,
+    t.name, uc.name, l.added_ts, l.modified_ts
+        """)
+        return query
+
+    def get(self):
+        query = self._query()
+        query = self._apply_args(m.Late, query)
+        times = query.all()
+        form = FilterForm(formdata=self.request.GET)
+        return dict(times=times, form=form)
 
 @view_config(route_name='employee_list_absence_pivot')
 class AbsencePivot(BaseView):

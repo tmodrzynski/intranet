@@ -51,6 +51,7 @@
             <li class="{% if current_page == 'late' %}active{% endif %}"><a href="{{ request.url_for('/employees/list/late') }}">{% trans %}Lates{% endtrans %}</a></li>
             <li class="{% if current_page == 'wrongtime' %}active{% endif %}"><a href="{{ request.url_for('/employees/list/wrong_time') }}">{% trans %}Wrong times{% endtrans %}</a></li>
             <li class="{% if current_page == 'absence' %}active{% endif %}"><a href="{{ request.url_for('/employees/list/absence') }}">{% trans %}Absences{% endtrans %}</a></li>
+            <li class="{% if current_page == 'work_from_home' %}active{% endif %}"><a href="{{ request.url_for('/employees/list/work_from_home') }}">{% trans %}Work from home{% endtrans %}</a></li>
         </ul>
     </div>
     <div class="appjust">
