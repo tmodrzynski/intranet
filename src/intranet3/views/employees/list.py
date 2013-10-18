@@ -10,7 +10,7 @@ from intranet3 import models as m
 from intranet3.models import User, Leave, DBSession
 from intranet3 import helpers as h
 from intranet3.helpers import groupby
-from intranet3.forms.employees import  FilterForm
+from intranet3.forms.employees import FilterForm, WorkFromHomeFilterForm
 from intranet3.log import INFO_LOG
 
 
@@ -46,28 +46,6 @@ class ApplyArgsMixin(object):
         return query
 
 
-class GetArgsMixin(object):
-    def _get_args(self):
-        limit = self.request.GET.get('limit')
-        date_start = self.request.GET.get('date_start')
-        if date_start:
-            date_start = datetime.datetime.strptime(date_start, '%d-%m-%Y').date()
-        else:
-            date_start = datetime.date(1990, 1, 1)
-        date_end = self.request.GET.get('date_end')
-        if date_end:
-            date_end = datetime.datetime.strptime(date_end, '%d-%m-%Y').date()
-        else:
-            date_end = datetime.date(datetime.MAXYEAR, 1, 1)
-        user_id = self.request.GET.get('user_id')
-        return dict(
-            date_start=date_start,
-            date_end=date_end,
-            limit=limit or FilterForm.DEFAULT_LIMIT,
-            user=int(user_id) if user_id else None
-        )
-
-
 @view_config(route_name='employee_list_late')
 class Late(ApplyArgsMixin, BaseView):
     def get(self):
@@ -97,14 +75,32 @@ class Absence(ApplyArgsMixin, BaseView):
 
 
 @view_config(route_name='employee_list_work_from_home')
-class WorkFromHome(GetArgsMixin, BaseView):
+class WorkFromHome(BaseView):
+    def _get_args(self):
+        user_id = self.request.GET.get('user_id')
+        coordinator_id = self.request.GET.get('coordinator_id')
+        verified = self.request.GET.get('verified')
+        verified = True if verified == 'y' else False
+        return dict(
+            user_id=int(user_id) if user_id else None,
+            coordinator_id=int(coordinator_id) if coordinator_id else None,
+            verified=verified
+        )
+
     def _query(self):
         """
         Gigantic query to grab all data at once. Raw SQL is so much more fun
         than SQLAlchemy, isn't it?
         """
         args = self._get_args()
-        user_sql = "AND l.user_id=%d" % args['user'] if args['user'] else ''
+        # We need to apply filters manually!
+        wheres = dict(
+            user='AND l.user_id=:user_id' if args['user_id'] is not None else '',
+            coordinator='AND l.coordinator_id=:coordinator_id'
+                if args['coordinator_id'] is not None else '',
+            verified='AND verified=:verified' if args['verified'] is not None else '',
+        )
+        # Why can't I use "SELECT *" here?
         fields = (
             'user_id', 'date', 'email', 'hours', 'explanation', 'hours_worked',
             'team_name', 'coordinator', 'added_ts', 'modified_ts'
@@ -113,7 +109,7 @@ class WorkFromHome(GetArgsMixin, BaseView):
 SELECT
     l.user_id, l.date, u.email, late_end-late_start AS hours, l.explanation,
     SUM(te.time) AS hours_worked, t.name AS team_name, uc.name AS coordinator,
-    l.added_ts, l.modified_ts
+    uc.id AS coordinator_id, l.added_ts, l.modified_ts
 FROM late l
 LEFT JOIN time_entry te ON te.user_id=l.user_id AND te.date=l.date
 LEFT JOIN "user" u ON u.id=l.user_id
@@ -128,21 +124,21 @@ LEFT JOIN project p ON p.id IN (
 )
 LEFT JOIN "user" uc ON uc.id=p.coordinator_id
 WHERE
-    l.work_from_home=TRUE AND
-    l.date >= :date_start AND
-    l.date <= :date_end
-    %s
+    l.work_from_home=TRUE
+    %(user)s
+    %(coordinator)s
+    %(verified)s
 GROUP BY
     l.user_id, l.date, l.explanation, u.email, l.late_start, l.late_end,
-    t.name, uc.name, l.added_ts, l.modified_ts
-LIMIT :limit
-        """ % user_sql).params(**args)
+    t.name, uc.name, uc.id, l.added_ts, l.modified_ts
+LIMIT 50
+        """ % wheres).params(**args)
         return query
 
     def get(self):
         query = self._query()
         times = query.all()
-        form = FilterForm(formdata=self.request.GET)
+        form = WorkFromHomeFilterForm(formdata=self.request.GET)
         return dict(times=times, form=form)
 
 

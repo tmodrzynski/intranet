@@ -3,7 +3,17 @@
 {% set current_page = 'work_from_home' %}
 
 {% block body %}
-    {{ filters_form(form) }}
+    <div class="filters form_late">
+        <form method="GET" action="{{ action or request.path_qs }}">
+            {{ form_field(form.user_id, _('Employee')) }}
+            {{ form_field(form.coordinator_id, _('Coordinator')) }}
+            {{ form_field(form.verified, _('Verified')) }}
+            <div class="buttons">
+                <input type="submit" value="{% trans %}Filter{% endtrans %}" class="button btn btn-primary" />
+            </div>
+        </form>
+    </div>
+
     <table class="table table-bordered table-hover project_times table_late">
     <thead>
         <tr>
@@ -13,8 +23,12 @@
             <th class="user">{% trans %}Employee{% endtrans %}</th>
             <th class="hours">{% trans %}Hours{% endtrans %}</th>
             <th class="hours">{% trans %}Hours worked{% endtrans %}</th>
-            <th class="explanation">{% trans %}Team{% endtrans %}</th>
-            <th class="justified">{% trans %}Coordinator{% endtrans %}</th>
+            <th class="team">{% trans %}Team{% endtrans %}</th>
+            <th class="coordinator">{% trans %}Coordinator{% endtrans %}</th>
+            <th class="review">{% trans %}Review{% endtrans %}</th>
+            {% if request.has_perm('admin') %}
+                <th class="options"></th>
+            {% endif %}
         </tr>
     </thead>
     <tbody>

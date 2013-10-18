@@ -190,4 +190,7 @@ class FilterForm(wtf.Form):
     limit = wtf.IntegerField(_(u'Limit'), validators=[], default=DEFAULT_LIMIT)
 
 
-
+class WorkFromHomeFilterForm(wtf.Form):
+    user_id = wtf.SelectField(_(u'Employee'), validators=[], choices=EmployeeChoices(first_empty=True))
+    coordinator_id = wtf.SelectField(_(u'Coordinator'), choices=EmployeeChoices(first_empty=True))
+    verified = wtf.BooleanField(_(u'Verified'))
