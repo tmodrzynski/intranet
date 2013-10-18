@@ -45,6 +45,29 @@ class ApplyArgsMixin(object):
 
         return query
 
+
+class GetArgsMixin(object):
+    def _get_args(self):
+        limit = self.request.GET.get('limit')
+        date_start = self.request.GET.get('date_start')
+        if date_start:
+            date_start = datetime.datetime.strptime(date_start, '%d-%m-%Y').date()
+        else:
+            date_start = datetime.date(1990, 1, 1)
+        date_end = self.request.GET.get('date_end')
+        if date_end:
+            date_end = datetime.datetime.strptime(date_end, '%d-%m-%Y').date()
+        else:
+            date_end = datetime.date(datetime.MAXYEAR, 1, 1)
+        user_id = self.request.GET.get('user_id')
+        return dict(
+            date_start=date_start,
+            date_end=date_end,
+            limit=limit or FilterForm.DEFAULT_LIMIT,
+            user=int(user_id) if user_id else None
+        )
+
+
 @view_config(route_name='employee_list_late')
 class Late(ApplyArgsMixin, BaseView):
     def get(self):
@@ -72,13 +95,16 @@ class Absence(ApplyArgsMixin, BaseView):
         form = FilterForm(formdata=self.request.GET)
         return dict(absences=absences, form=form)
 
+
 @view_config(route_name='employee_list_work_from_home')
-class WorkFromHome(ApplyArgsMixin, BaseView):
+class WorkFromHome(GetArgsMixin, BaseView):
     def _query(self):
         """
         Gigantic query to grab all data at once. Raw SQL is so much more fun
         than SQLAlchemy, isn't it?
         """
+        args = self._get_args()
+        user_sql = "AND l.user_id=%d" % args['user'] if args['user'] else ''
         fields = (
             'user_id', 'date', 'email', 'hours', 'explanation', 'hours_worked',
             'team_name', 'coordinator', 'added_ts', 'modified_ts'
@@ -101,18 +127,24 @@ LEFT JOIN project p ON p.id IN (
     LIMIT 1
 )
 LEFT JOIN "user" uc ON uc.id=p.coordinator_id
-WHERE l.work_from_home=TRUE
-GROUP BY l.user_id, l.date, l.explanation, u.email, l.late_start, l.late_end,
+WHERE
+    l.work_from_home=TRUE AND
+    l.date >= :date_start AND
+    l.date <= :date_end
+    %s
+GROUP BY
+    l.user_id, l.date, l.explanation, u.email, l.late_start, l.late_end,
     t.name, uc.name, l.added_ts, l.modified_ts
-        """)
+LIMIT :limit
+        """ % user_sql).params(**args)
         return query
 
     def get(self):
         query = self._query()
-        query = self._apply_args(m.Late, query)
         times = query.all()
         form = FilterForm(formdata=self.request.GET)
         return dict(times=times, form=form)
+
 
 @view_config(route_name='employee_list_absence_pivot')
 class AbsencePivot(BaseView):
