@@ -96,7 +96,7 @@ class WorkFromHome(BaseView):
         # We need to apply filters manually!
         wheres = dict(
             user='AND l.user_id=:user_id' if args['user_id'] is not None else '',
-            coordinator='AND l.coordinator_id=:coordinator_id'
+            coordinator='AND coordinator_id=:coordinator_id'
                 if args['coordinator_id'] is not None else '',
             verified='AND verified=:verified' if args['verified'] is not None else '',
         )
@@ -107,9 +107,10 @@ class WorkFromHome(BaseView):
         )
         query = DBSession.query(*fields).from_statement("""
 SELECT
-    l.user_id, l.date, u.email, late_end-late_start AS hours, l.explanation,
-    SUM(te.time) AS hours_worked, t.name AS team_name, uc.name AS coordinator,
-    uc.id AS coordinator_id, l.added_ts, l.modified_ts, l.review
+    l.user_id, l.date, u.email, l.explanation, SUM(te.time) AS hours_worked,
+    extract(hour from late_end-late_start)+extract(minute from late_end-late_start)/60 AS hours,
+    t.name AS team_name, uc.name AS coordinator, uc.id AS coordinator_id,
+    l.added_ts, l.modified_ts, l.review
 FROM late l
 LEFT JOIN time_entry te ON te.user_id=l.user_id AND te.date=l.date
 LEFT JOIN "user" u ON u.id=l.user_id
