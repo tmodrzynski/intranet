@@ -1,6 +1,5 @@
 !.gitignore
 *.pyc
-db_migrations/*
 src/secret_keys.py
 *.egg-info
 .settings
