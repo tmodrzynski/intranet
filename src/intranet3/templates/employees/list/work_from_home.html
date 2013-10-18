@@ -15,39 +15,55 @@
     </div>
 
     <table class="table table-bordered table-hover project_times table_late">
-    <thead>
-        <tr>
-            <th class="lp">{% trans %}No.{% endtrans %}</th>
-            <th class="added">{% trans %}Added{% endtrans %}</th>
-            <th class="date">{% trans %}Date{% endtrans %}</th>
-            <th class="user">{% trans %}Employee{% endtrans %}</th>
-            <th class="hours">{% trans %}Hours{% endtrans %}</th>
-            <th class="hours">{% trans %}Hours worked{% endtrans %}</th>
-            <th class="team">{% trans %}Team{% endtrans %}</th>
-            <th class="coordinator">{% trans %}Coordinator{% endtrans %}</th>
-            <th class="review">{% trans %}Review{% endtrans %}</th>
-            {% if request.has_perm('admin') %}
-                <th class="options"></th>
-            {% endif %}
-        </tr>
-    </thead>
-    <tbody>
-    {% if times %}
-        {% for time in times %}
-            <tr data-id="{{ time.id }}" data-name="time" class="{{ loop.cycle('odd', 'even') }}">
-                <td>{{ loop.index }}</td>
-                <td title="{{ time.modified_ts.strftime('%d.%m.%Y %H:%M') }}"> {{ time.added_ts.strftime('%d.%m.%Y %H:%M') }}</td>
-                <td>{{ time.date }}</td>
-                <td>{{ time.email }}</td>
-                <td>{{ time.hours }}</td>
-                <td>{{ time.hours_worked }}</td>
-                <td>{{ time.team_name }}</td>
-                <td>{{ time.coordinator }}</td>
+        <thead>
+            <tr>
+                <th class="lp">{% trans %}No.{% endtrans %}</th>
+                <th class="added">{% trans %}Added{% endtrans %}</th>
+                <th class="date">{% trans %}Date{% endtrans %}</th>
+                <th class="user">{% trans %}Employee{% endtrans %}</th>
+                <th class="hours">{% trans %}Hours{% endtrans %}</th>
+                <th class="hours">{% trans %}Hours worked{% endtrans %}</th>
+                <th class="team">{% trans %}Team{% endtrans %}</th>
+                <th class="coordinator">{% trans %}Coordinator{% endtrans %}</th>
+                {% if request.has_perm('admin') or True %}
+                    <th class="review">{% trans %}Veriffy{% endtrans %}</th>
+                {% endif %}
             </tr>
-        {% endfor %}
-    {% else %}
-        <tr><td colspan="8">{% trans %}No results{% endtrans %}</td></tr>
-    {% endif %}
-    </tbody>
+        </thead>
+        <tbody>
+        {% if times %}
+            {% for time in times %}
+                <tr data-id="{{ time.id }}" data-name="late" class="{{ loop.cycle('odd', 'even') }}" title="{{ time.explanation }}">
+                    <td>{{ loop.index }}</td>
+                    <td title="{{ time.modified_ts.strftime('%d.%m.%Y %H:%M') }}"> {{ time.added_ts.strftime('%d.%m.%Y %H:%M') }}</td>
+                    <td>{{ time.date }}</td>
+                    <td>{{ time.email }}</td>
+                    <td class="hours">{{ time.hours }}</td>
+                    <td>{{ time.hours_worked }}</td>
+                    <td>{{ time.team_name or '' }}</td>
+                    <td>{{ time.coordinator or '' }}</td>
+                    {% if request.has_perm('admin') or True %}
+                        <td>
+                            <input class="text" type="text" value="{{ time.review or '' }}">
+                            <input class="button btn btn-primary" type="button" value="{% trans %}Save{% endtrans %}">
+                        </td>
+                    {% endif %}
+                </tr>
+            {% endfor %}
+        {% else %}
+            <tr><td colspan="8">{% trans %}No results{% endtrans %}</td></tr>
+        {% endif %}
+        </tbody>
     </table>
+{% endblock %}
+
+{% block sub_tailscript %}
+    <script type="text/javascript">
+        $('.table_late tbody tr').tooltip({
+            container: 'body',
+            animation: false,
+            html: true,
+            template: '<div class="tooltip"><div class="tooltip-arrow"></div><div class="tooltip-inner"></div></div>'
+        });
+    </script>
 {% endblock %}

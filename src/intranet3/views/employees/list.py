@@ -103,13 +103,13 @@ class WorkFromHome(BaseView):
         # Why can't I use "SELECT *" here?
         fields = (
             'user_id', 'date', 'email', 'hours', 'explanation', 'hours_worked',
-            'team_name', 'coordinator', 'added_ts', 'modified_ts'
+            'team_name', 'coordinator', 'added_ts', 'modified_ts', 'review'
         )
         query = DBSession.query(*fields).from_statement("""
 SELECT
     l.user_id, l.date, u.email, late_end-late_start AS hours, l.explanation,
     SUM(te.time) AS hours_worked, t.name AS team_name, uc.name AS coordinator,
-    uc.id AS coordinator_id, l.added_ts, l.modified_ts
+    uc.id AS coordinator_id, l.added_ts, l.modified_ts, l.review
 FROM late l
 LEFT JOIN time_entry te ON te.user_id=l.user_id AND te.date=l.date
 LEFT JOIN "user" u ON u.id=l.user_id
@@ -130,7 +130,7 @@ WHERE
     %(verified)s
 GROUP BY
     l.user_id, l.date, l.explanation, u.email, l.late_start, l.late_end,
-    t.name, uc.name, uc.id, l.added_ts, l.modified_ts
+    t.name, uc.name, uc.id, l.added_ts, l.modified_ts, l.review
 LIMIT 50
         """ % wheres).params(**args)
         return query
